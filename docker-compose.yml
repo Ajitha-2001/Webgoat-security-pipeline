@@ -1,0 +1,12 @@
+services:
+  webgoat:
+    build: ./webgoat
+    container_name: webgoat
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:9090:9090"
+    environment:
+      WEBGOAT_HOST: localhost
+      WEBGOAT_PORT: 8080
+      WEBWOLF_HOST: localhost
+      WEBWOLF_PORT: 9090
