@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: CI/CD Security Pipeline
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  build-and-scan:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -23,5 +23,30 @@ jobs:
         working-directory: ./webgoat
         run: ./mvnw clean package -DskipTests
 
+      # --- Gate 1: Secrets scanning ---
+      - name: Gitleaks secrets scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # --- Gate 2: Dependency / SCA scanning ---
+      - name: OWASP Dependency-Check
+        working-directory: ./webgoat
+        run: ./mvnw org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7
+
+      # --- Gate 3: SAST ---
+      - name: Semgrep SAST scan
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: p/java
+
       - name: Build Docker image
         run: docker compose build
+
+      # --- Gate 4: Container image scanning ---
+      - name: Trivy container scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'webgoat-security-pipeline-webgoat:latest'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
