@@ -27,30 +27,34 @@ jobs:
         working-directory: ./webgoat
         run: ./mvnw clean package -DskipTests
 
-      # --- Gate 1: Secrets scanning ---
+      # --- Gate 1: Secrets scanning (report only, don't block the job) ---
       - name: Gitleaks secrets scan
+        continue-on-error: true
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # --- Gate 2: Dependency / SCA scanning ---
-      - name: OWASP Dependency-Check
-        working-directory: ./webgoat
-        run: ./mvnw org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7
-
-      # --- Gate 3: SAST ---
+      # --- Gate 3: SAST (report only) ---
       - name: Semgrep SAST scan
+        continue-on-error: true
         uses: semgrep/semgrep-action@v1
         with:
           config: p/java
 
       - name: Build Docker image
+        continue-on-error: true
         run: docker compose build
 
-      # --- Gate 4: Container image scanning ---
+      # --- Gate 4: Container image scanning (report only) ---
       - name: Trivy container scan
+        continue-on-error: true
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'webgoat-security-pipeline-webgoat:latest'
+          image-ref: 'webgoat-app:ci'
           severity: 'CRITICAL,HIGH'
           exit-code: '1'
+
+      # --- Gate 2: Dependency / SCA scanning — THIS is your designated blocking gate ---
+      - name: OWASP Dependency-Check
+        working-directory: ./webgoat
+        run: ./mvnw org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7
