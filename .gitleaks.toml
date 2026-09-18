@@ -10,4 +10,5 @@ paths = [
   '''webgoat/src/main/resources/lessons/jwt/.*''',
   '''webgoat/src/test/java/org/owasp/webgoat/lessons/jwt/.*''',
   '''webgoat/src/test/java/org/owasp/webgoat/webwolf/jwt/.*''',
+  '''webgoat/src/it/java/org/owasp/webgoat/.*''',
 ]
