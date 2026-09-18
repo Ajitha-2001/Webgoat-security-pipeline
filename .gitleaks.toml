@@ -1,0 +1,11 @@
+title = "Gitleaks config for WebGoat Security Pipeline"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known WebGoat lesson test fixtures (intentional teaching examples, not real secrets)"
+paths = [
+  '''webgoat/src/it/java/org/owasp/webgoat/playwright/webwolf/JwtUITest.*''',
+  '''webgoat/src/main/java/org/owasp/webgoat/lessons/jwt/JWTRefreshEndpoint.*'''
+]
