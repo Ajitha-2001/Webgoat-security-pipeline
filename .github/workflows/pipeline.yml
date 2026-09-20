@@ -27,14 +27,12 @@ jobs:
         working-directory: ./webgoat
         run: ./mvnw clean package -DskipTests
 
-      # --- Gate 1: Secrets scanning (report only, don't block the job) ---
       - name: Gitleaks secrets scan
         continue-on-error: true
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # --- Gate 2: Dependency / SCA scanning via Trivy filesystem scan (no API key needed) ---
       - name: Trivy dependency scan (filesystem)
         continue-on-error: true
         uses: aquasecurity/trivy-action@master
@@ -44,7 +42,6 @@ jobs:
           severity: 'CRITICAL,HIGH'
           exit-code: '1'
 
-      # --- Gate 3: SAST (report only) ---
       - name: Semgrep SAST scan
         continue-on-error: true
         uses: semgrep/semgrep-action@v1
@@ -54,9 +51,7 @@ jobs:
       - name: Build Docker image
         run: docker compose build
 
-      # --- Gate 4: Container image scanning (evidence already captured — now non-blocking) ---
       - name: Trivy container scan
-        continue-on-error: true
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'webgoat-app:ci'
