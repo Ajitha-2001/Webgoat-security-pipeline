@@ -247,5 +247,3 @@ The included WebGoat source is governed by its upstream GNU General Public Licen
 **Programme:** BSc (Hons) Information Technology  
 **Year / Semester:** Year 3, Semester 1  
 **Academic year:** 2026
-
-This repository supports the group assessment. The assessment brief and submitted technical report define the final requirements, evidence, and scope.
