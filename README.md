@@ -249,27 +249,3 @@ The included WebGoat source is governed by its upstream GNU General Public Licen
 **Academic year:** 2026
 
 This repository supports the group assessment. The assessment brief and submitted technical report define the final requirements, evidence, and scope.
-
-Get-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform | Select-Object FeatureName, State
-
-2. Set your Git identity (one-time, in any terminal):
-
-git config --global user.name "Your Name"
-git config --global user.email "your-email@example.com"
-
-3. Clone the repo:
-
-cd ~/Desktop
-git clone https://github.com/Ajitha-2001/Webgoat-security-pipeline.git
-cd Webgoat-security-pipeline
-
-4. Switch to your own branch (this is the important part — don't work on main):
-
-git checkout <their-branch-name>
-
-e.g. for Gangodawila:
-
-git checkout Gangodawila/threat-model
-
-docker run --rm -v ${PWD}/webgoat:/app -w /app eclipse-temurin:25-jdk-noble ./mvnw clean package -DskipTests
-docker compose up --build
