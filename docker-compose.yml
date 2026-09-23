@@ -1,5 +1,6 @@
 services:
   webgoat:
+    image: webgoat-app:ci
     build: ./webgoat
     container_name: webgoat
     ports:
