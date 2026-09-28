@@ -4,92 +4,109 @@
  */
 package org.owasp.webgoat.lessons.idor;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import org.owasp.webgoat.container.LessonDataSource;
+import static org.owasp.webgoat.container.assignments.AttackResultBuilder.failed;
+import static org.owasp.webgoat.container.assignments.AttackResultBuilder.success;
+
 import org.owasp.webgoat.container.assignments.AssignmentEndpoint;
+import org.owasp.webgoat.container.assignments.AssignmentHints;
 import org.owasp.webgoat.container.assignments.AttackResult;
-import org.owasp.webgoat.container.session.UserSessionData;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
+import org.owasp.webgoat.container.session.LessonSession;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 
+@RestController
+@AssignmentHints({
+  "idor.hints.otherProfile1",
+  "idor.hints.otherProfile2",
+  "idor.hints.otherProfile3",
+  "idor.hints.otherProfile4",
+  "idor.hints.otherProfile5",
+  "idor.hints.otherProfile6",
+  "idor.hints.otherProfile7",
+  "idor.hints.otherProfile8",
+  "idor.hints.otherProfile9"
+})
 public class IDOREditOtherProfile implements AssignmentEndpoint {
 
-  @Autowired private UserSessionData userSessionData;
+  private final LessonSession userSessionData;
 
-  @Autowired private LessonDataSource dataSource;
+  public IDOREditOtherProfile(LessonSession lessonSession) {
+    this.userSessionData = lessonSession;
+  }
 
-  @PutMapping(
-      path = "/IDOR/profile/{userId}",
-      consumes = MediaType.APPLICATION_JSON_VALUE,
-      produces = MediaType.APPLICATION_JSON_VALUE)
+  @PutMapping(path = "/IDOR/profile/{userId}", consumes = "application/json")
   @ResponseBody
   public AttackResult completed(
-      @PathVariable String userId,
-      @RequestBody String userSubmittedProfile)
-      throws IOException {
+      @PathVariable("userId") String userId, @RequestBody UserProfile userSubmittedProfile) {
 
-    // Get the authenticated user's ID from the server-side session.
-    String authUserId =
-        (String) userSessionData.getValue("idor-authenticated-user-id");
+    // Get the ID of the authenticated user from the server-side session.
+    String authUserId = (String) userSessionData.getValue("idor-authenticated-user-id");
 
-    /*
-     * SECURITY FIX:
-     * Block the request if:
-     * 1. There is no authenticated user, OR
-     * 2. The authenticated user's ID is different from the
-     *    user ID requested in the URL.
-     */
+    // Authorization check:
+    // A user must not be allowed to modify another user's profile.
     if (authUserId == null || !authUserId.equals(userId)) {
+      return failed(this).feedback("Unauthorized profile access").build();
+    }
+
+    // Original WebGoat lesson logic below.
+    UserProfile currentUserProfile = new UserProfile(userId);
+
+    if (userSubmittedProfile.getUserId() != null
+        && !userSubmittedProfile.getUserId().equals(authUserId)) {
+
+      currentUserProfile.setColor(userSubmittedProfile.getColor());
+      currentUserProfile.setRole(userSubmittedProfile.getRole());
+
+      userSessionData.setValue("idor-updated-other-profile", currentUserProfile);
+
+      if (currentUserProfile.getRole() <= 1
+          && currentUserProfile.getColor().equalsIgnoreCase("red")) {
+        return success(this)
+            .feedback("idor.edit.profile.success1")
+            .output(currentUserProfile.profileToMap().toString())
+            .build();
+      }
+
+      if (currentUserProfile.getRole() > 1
+          && currentUserProfile.getColor().equalsIgnoreCase("red")) {
+        return failed(this)
+            .feedback("idor.edit.profile.failure1")
+            .output(currentUserProfile.profileToMap().toString())
+            .build();
+      }
+
+      if (currentUserProfile.getRole() <= 1
+          && !currentUserProfile.getColor().equalsIgnoreCase("red")) {
+        return failed(this)
+            .feedback("idor.edit.profile.failure2")
+            .output(currentUserProfile.profileToMap().toString())
+            .build();
+      }
+
       return failed(this)
-          .feedback("Unauthorized profile access")
+          .feedback("idor.edit.profile.failure3")
+          .output(currentUserProfile.profileToMap().toString())
           .build();
+
+    } else if (userSubmittedProfile.getUserId() != null
+        && userSubmittedProfile.getUserId().equals(authUserId)) {
+
+      return failed(this).feedback("idor.edit.profile.failure4").build();
     }
 
-    ObjectMapper objectMapper = new ObjectMapper();
+    if (currentUserProfile.getColor().equals("black")
+        && currentUserProfile.getRole() <= 1) {
 
-    Map<String, Object> userSubmittedProfileMap =
-        objectMapper.readValue(userSubmittedProfile, HashMap.class);
+      return success(this)
+          .feedback("idor.edit.profile.success2")
+          .output(userSessionData.getValue("idor-updated-own-profile").toString())
+          .build();
 
-    /*
-     * IMPORTANT:
-     * Load the profile using the authenticated user's ID,
-     * not an arbitrary user ID supplied by the client.
-     */
-    UserProfile currentUserProfile =
-        new UserProfile(dataSource, authUserId);
-
-    if (userSubmittedProfileMap.containsKey("color")) {
-      currentUserProfile.setColor(
-          (String) userSubmittedProfileMap.get("color"));
+    } else {
+      return failed(this).feedback("idor.edit.profile.failure3").build();
     }
-
-    if (userSubmittedProfileMap.containsKey("size")) {
-      currentUserProfile.setSize(
-          (String) userSubmittedProfileMap.get("size"));
-    }
-
-    if (userSubmittedProfileMap.containsKey("name")) {
-      currentUserProfile.setName(
-          (String) userSubmittedProfileMap.get("name"));
-    }
-
-    if (userSubmittedProfileMap.containsKey("role")) {
-      currentUserProfile.setRole(
-          (Integer) userSubmittedProfileMap.get("role"));
-    }
-
-    currentUserProfile.updateProfile();
-
-    return success(this)
-        .feedback("Profile updated successfully")
-        .output(currentUserProfile.toString())
-        .build();
   }
 }
