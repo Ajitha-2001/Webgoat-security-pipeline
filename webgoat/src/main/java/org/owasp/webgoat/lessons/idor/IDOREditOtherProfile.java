@@ -42,24 +42,26 @@ public class IDOREditOtherProfile implements AssignmentEndpoint {
   public AttackResult completed(
       @PathVariable("userId") String userId, @RequestBody UserProfile userSubmittedProfile) {
 
+    // Get the ID of the authenticated user from the server-side session.
     String authUserId = (String) userSessionData.getValue("idor-authenticated-user-id");
 
+    // Authorization check:
+    // A user must not be allowed to modify another user's profile.
     if (authUserId == null || !authUserId.equals(userId)) {
       return failed(this).feedback("Unauthorized profile access").build();
     }
-    // this is where it starts ... accepting the user submitted ID and assuming it will be the same
-    // as the logged in userId and not checking for proper authorization
-    // Certain roles can sometimes edit others' profiles, but we shouldn't just assume that and let
-    // everyone, right?
-    // Except that this is a vulnerable app ... so we will
+
+    // Original WebGoat lesson logic below.
     UserProfile currentUserProfile = new UserProfile(userId);
+
     if (userSubmittedProfile.getUserId() != null
         && !userSubmittedProfile.getUserId().equals(authUserId)) {
-      // let's get this started ...
+
       currentUserProfile.setColor(userSubmittedProfile.getColor());
       currentUserProfile.setRole(userSubmittedProfile.getRole());
-      // we will persist in the session object for now in case we want to refer back or use it later
+
       userSessionData.setValue("idor-updated-other-profile", currentUserProfile);
+
       if (currentUserProfile.getRole() <= 1
           && currentUserProfile.getColor().equalsIgnoreCase("red")) {
         return success(this)
@@ -84,21 +86,25 @@ public class IDOREditOtherProfile implements AssignmentEndpoint {
             .build();
       }
 
-      // else
       return failed(this)
           .feedback("idor.edit.profile.failure3")
           .output(currentUserProfile.profileToMap().toString())
           .build();
+
     } else if (userSubmittedProfile.getUserId() != null
         && userSubmittedProfile.getUserId().equals(authUserId)) {
+
       return failed(this).feedback("idor.edit.profile.failure4").build();
     }
 
-    if (currentUserProfile.getColor().equals("black") && currentUserProfile.getRole() <= 1) {
+    if (currentUserProfile.getColor().equals("black")
+        && currentUserProfile.getRole() <= 1) {
+
       return success(this)
           .feedback("idor.edit.profile.success2")
           .output(userSessionData.getValue("idor-updated-own-profile").toString())
           .build();
+
     } else {
       return failed(this).feedback("idor.edit.profile.failure3").build();
     }
