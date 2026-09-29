@@ -20,6 +20,29 @@ The project combines containerisation, threat modelling, secure coding, and auto
 
 Local source compilation and application startup have been verified during setup. Pipeline implementation and exploit-and-fix evidence are tracked separately; a successful application build does not establish that the application is secure.
 
+## Threat Model Summary
+
+A STRIDE-based threat model was carried out against the WebGoat deployment architecture. Four application-specific threats were identified, each tied to a vulnerability class demonstrated during the exploit-and-fix work. Full justifications, the risk matrix, and the threat-to-control mapping are recorded in the technical report and in `docs/Threat-Modelling.pdf`.
+
+| ID | Threat | STRIDE Category | Likelihood | Impact | Primary Control |
+| --- | --- | --- | --- | --- | --- |
+| T1 | SQL Injection — unsanitised string-concatenated queries in the SQL Injection lesson | Tampering / Information Disclosure | High | High | Parameterised queries (`PreparedStatement`), verified with Semgrep (SAST gate) |
+| T2 | Stored Cross-Site Scripting (XSS) — unencoded user input rendered back to other users | Tampering / Information Disclosure | High | Medium–High | Output encoding, verified with Semgrep (SAST gate) |
+| T3 | JWT Bypass — insufficient signature verification, including `alg:none` | Spoofing / Elevation of Privilege | Medium | High | Enforced signature verification; reject `alg:none`; validate issuer/expiry; supporting library versions checked via dependency scanning |
+| T4 | Insecure Direct Object Reference (IDOR) — missing server-side object-ownership checks | Elevation of Privilege / Information Disclosure | Medium | Medium–High | Server-side ownership check on every object request |
+
+**Risk matrix (Likelihood × Impact):**
+
+| Likelihood \ Impact | Low | Medium | High |
+| --- | --- | --- | --- |
+| High | — | — | T1 SQLi, T2 XSS |
+| Medium | — | T4 IDOR | T3 JWT Bypass |
+| Low | — | — | — |
+
+T1 (SQL Injection) and T2 (Stored XSS) carry the highest combined risk due to their high likelihood of exploitation. T3 (JWT Bypass) has a lower likelihood but a high potential impact, since a successful forgery grants full impersonation. T4 (IDOR) sits at medium likelihood and medium-to-high impact.
+
+These four threats map to three OWASP Top 10 (2021) categories — Injection, Broken Authentication, and Broken Access Control — giving coverage across multiple vulnerability classes rather than a single one.
+
 ## Repository Layout
 
 | Path | Purpose |
@@ -30,7 +53,7 @@ Local source compilation and application startup have been verified during setup
 | `webgoat/Dockerfile` | Runtime image definition; expects a compiled JAR in `target/`. |
 | `docker-compose.yml` | Local application configuration and port mappings. |
 | `.github/workflows/` | GitHub Actions workflow definitions, as implemented. |
-| `docs/` | Supporting diagrams and evidence, when added. |
+| `docs/` | Supporting diagrams and evidence, including the threat model report. |
 | `README.md` | Setup, operation, and contribution guidance. |
 
 ## Prerequisites
@@ -193,9 +216,9 @@ View execution history in the repository's [Actions tab](https://github.com/Ajit
 
 ## Vulnerability Documentation
 
-The technical report and supporting evidence should record, for each selected vulnerability:
+Each vulnerability corresponds directly to a threat identified in the Threat Model Summary above (T1–T4). The technical report and supporting evidence record, for each:
 
-- Affected component, source location, and relevant threat.
+- Affected component, source location, and the corresponding threat ID (T1–T4).
 - Reproduction steps and observed behaviour in the local lab.
 - Root cause and security impact.
 - The code change and why it addresses the root cause.
@@ -229,10 +252,10 @@ Store supporting materials in `docs/` when added, and submit the final technical
 
 | Student ID | Name | Responsibility |
 | --- | --- | --- |
-| IT24100092 | Kularathne I M A G (Ajitha) | Project coordination; Architecture and Containerisation (2.1); CI/CD Pipeline and Security Automation (2.4, 2.5). |
-| IT24100020 | Gangodawila G P I C | Threat Modelling and Risk Assessment (2.2): STRIDE analysis, risk matrix, and threat-to-control mapping. |
-| IT24100192 | Induwara K A A K | Secure Coding: Exploit-and-Fix, Vulnerabilities 1 and 2 (2.3). |
-| IT24101738 | Upeja M.A.T | Secure Coding: Exploit-and-Fix, Vulnerabilities 3 and 4 (2.3). |
+| IT24100092 | Kularathne I M A G | CI/CD Pipeline and Security Automation (2.4, 2.5); Secure Coding: Exploit-and-Fix, Vulnerability 1 — SQL Injection (T1) (2.3). |
+| IT24100020 | Gangodawila G P I C | Threat Modelling and Risk Assessment (2.2): STRIDE analysis, risk matrix, and threat-to-control mapping; Secure Coding: Exploit-and-Fix, Vulnerability 2 — Stored XSS (T2) (2.3). |
+| IT24100192 | Induwara K A A K | Project coordination; Secure Coding: Exploit-and-Fix, Vulnerability 3 — JWT Bypass (T3) (2.3). |
+| IT24101738 | Upeja M.A.T | Architecture and Containerisation (2.1); Secure Coding: Exploit-and-Fix, Vulnerability 4 — IDOR (T4) (2.3). |
 
 ## Attribution and Licence
 
@@ -242,10 +265,10 @@ The included WebGoat source is governed by its upstream GNU General Public Licen
 
 ## Academic Context
 
-**Module:** IE3142 — DevOps Security  
-**Institution:** Sri Lanka Institute of Information Technology (SLIIT)  
-**Programme:** BSc (Hons) Information Technology  
-**Year / Semester:** Year 3, Semester 1  
+**Module:** IE3142 — DevOps Security
+**Institution:** Sri Lanka Institute of Information Technology (SLIIT)
+**Programme:** BSc (Hons) Information Technology
+**Year / Semester:** Year 3, Semester 1
 **Academic year:** 2026
 
 This repository supports the group assessment. The assessment brief and submitted technical report define the final requirements, evidence, and scope.
