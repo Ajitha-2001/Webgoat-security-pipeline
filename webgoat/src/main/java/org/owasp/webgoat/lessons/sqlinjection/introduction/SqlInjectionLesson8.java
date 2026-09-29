@@ -4,12 +4,11 @@
  */
 package org.owasp.webgoat.lessons.sqlinjection.introduction;
 
-import static java.sql.ResultSet.CONCUR_UPDATABLE;
-import static java.sql.ResultSet.TYPE_SCROLL_SENSITIVE;
-import static org.owasp.webgoat.container.assignments.AttackResultBuilder.failed;
-import static org.owasp.webgoat.container.assignments.AttackResultBuilder.success;
-
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import org.owasp.webgoat.container.LessonDataSource;
@@ -20,6 +19,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.util.HtmlUtils;
+
+import static org.owasp.webgoat.container.assignments.AttackResultBuilder.failed;
+import static org.owasp.webgoat.container.assignments.AttackResultBuilder.success;
 
 @RestController
 @AssignmentHints(
@@ -40,116 +43,176 @@ public class SqlInjectionLesson8 implements AssignmentEndpoint {
 
   @PostMapping("/SqlInjection/attack8")
   @ResponseBody
-  public AttackResult completed(@RequestParam String name, @RequestParam String auth_tan) {
+  public AttackResult completed(
+      @RequestParam String name,
+      @RequestParam String auth_tan) {
+
     return injectableQueryConfidentiality(name, auth_tan);
   }
 
-  protected AttackResult injectableQueryConfidentiality(String name, String auth_tan) {
+  protected AttackResult injectableQueryConfidentiality(
+      String name,
+      String auth_tan) {
+
     StringBuilder output = new StringBuilder();
 
-    // --- FIX: query now uses '?' placeholders instead of pasting user input directly in ---
-    String query = "SELECT * FROM employees WHERE last_name = ? AND auth_tan = ?";
+    // SECURITY FIX:
+    // Use placeholders instead of concatenating user-controlled input.
+    String query =
+        "SELECT * FROM employees WHERE last_name = ? AND auth_tan = ?";
 
-    try (Connection connection = dataSource.getConnection()) {
-      try {
-        // --- FIX: PreparedStatement instead of plain Statement ---
+    try (Connection connection = dataSource.getConnection();
         PreparedStatement statement =
             connection.prepareStatement(
-                query, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+                query,
+                ResultSet.TYPE_SCROLL_INSENSITIVE,
+                ResultSet.CONCUR_READ_ONLY)) {
 
-        // --- FIX: user input bound safely as data, not inserted into the SQL text ---
-        statement.setString(1, name);
-        statement.setString(2, auth_tan);
+      // SECURITY FIX:
+      // User input is treated as data instead of executable SQL.
+      statement.setString(1, name);
+      statement.setString(2, auth_tan);
 
-        log(connection, query);
+      // Record the attempted lookup without constructing executable SQL.
+      log(connection, name, auth_tan);
 
-        // --- FIX: executeQuery() with no arguments, since values are already bound above ---
-        ResultSet results = statement.executeQuery();
+      try (ResultSet results = statement.executeQuery()) {
 
-        if (results.getStatement() != null) {
-          if (results.first()) {
-            output.append(generateTable(results));
-            results.last();
+        if (results.first()) {
 
-            if (results.getRow() > 1) {
-              // more than one record, the user succeeded
-              return success(this)
-                  .feedback("sql-injection.8.success")
-                  .output(output.toString())
-                  .build();
-            } else {
-              // only one record
-              return failed(this).feedback("sql-injection.8.one").output(output.toString()).build();
-            }
+          // Move back before the first row because generateTable()
+          // iterates through the complete ResultSet.
+          results.beforeFirst();
 
-          } else {
-            // no results
-            return failed(this).feedback("sql-injection.8.no.results").build();
+          output.append(generateTable(results));
+
+          results.last();
+
+          if (results.getRow() > 1) {
+            return success(this)
+                .feedback("sql-injection.8.success")
+                .output(output.toString())
+                .build();
           }
+
+          return failed(this)
+              .feedback("sql-injection.8.one")
+              .output(output.toString())
+              .build();
+
         } else {
-          return failed(this).build();
+          return failed(this)
+              .feedback("sql-injection.8.no.results")
+              .build();
         }
-      } catch (SQLException e) {
-        return failed(this)
-            .output("<br><span class='feedback-negative'>" + e.getMessage() + "</span>")
-            .build();
       }
+
+    } catch (SQLException e) {
+      return failed(this)
+          .output(
+              "<br><span class='feedback-negative'>"
+                  + HtmlUtils.htmlEscape(e.getMessage() == null ? "" : e.getMessage())
+                  + "</span>")
+          .build();
 
     } catch (Exception e) {
       return failed(this)
-          .output("<br><span class='feedback-negative'>" + e.getMessage() + "</span>")
+          .output(
+              "<br><span class='feedback-negative'>"
+                  + HtmlUtils.htmlEscape(e.getMessage() == null ? "" : e.getMessage())
+                  + "</span>")
           .build();
     }
   }
 
-  public static String generateTable(ResultSet results) throws SQLException {
+  public static String generateTable(ResultSet results)
+      throws SQLException {
+
     ResultSetMetaData resultsMetaData = results.getMetaData();
     int numColumns = resultsMetaData.getColumnCount();
+
     results.beforeFirst();
+
     StringBuilder table = new StringBuilder();
     table.append("<table>");
 
     if (results.next()) {
+
       table.append("<tr>");
-      for (int i = 1; i < (numColumns + 1); i++) {
-        table.append("<th>" + resultsMetaData.getColumnName(i) + "</th>");
+
+      for (int i = 1; i <= numColumns; i++) {
+        table.append("<th>")
+            .append(
+                HtmlUtils.htmlEscape(
+                    resultsMetaData.getColumnName(i)))
+            .append("</th>");
       }
+
       table.append("</tr>");
 
       results.beforeFirst();
+
       while (results.next()) {
+
         table.append("<tr>");
-        for (int i = 1; i < (numColumns + 1); i++) {
-          table.append("<td>" + results.getString(i) + "</td>");
+
+        for (int i = 1; i <= numColumns; i++) {
+
+          String value = results.getString(i);
+
+          table.append("<td>")
+              .append(
+                  HtmlUtils.htmlEscape(
+                      value == null ? "" : value))
+              .append("</td>");
         }
+
         table.append("</tr>");
       }
 
     } else {
-      table.append("Query Successful; however no data was returned from this query.");
+      table.append(
+          "Query Successful; however no data was returned from this query.");
     }
 
     table.append("</table>");
-    return (table.toString());
+
+    return table.toString();
   }
 
-  public static void log(Connection connection, String action) {
-    action = action.replace('\'', '"');
+  public static void log(
+      Connection connection,
+      String name,
+      String authTan) {
+
     Calendar cal = Calendar.getInstance();
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+    SimpleDateFormat sdf =
+        new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
     String time = sdf.format(cal.getTime());
 
-    // --- FIX: parameterised insert instead of string concatenation ---
-    String logQuery = "INSERT INTO access_log (time, action) VALUES (?, ?)";
+    // Log the attempted operation without creating executable SQL.
+    String action =
+        "Employee lookup: last_name="
+            + name
+            + ", auth_tan="
+            + authTan;
 
-    try {
-      PreparedStatement statement =
-          connection.prepareStatement(logQuery, TYPE_SCROLL_SENSITIVE, CONCUR_UPDATABLE);
+    String logQuery =
+        "INSERT INTO access_log (time, action) VALUES (?, ?)";
+
+    try (PreparedStatement statement =
+        connection.prepareStatement(logQuery)) {
+
       statement.setString(1, time);
       statement.setString(2, action);
+
       statement.executeUpdate();
+
     } catch (SQLException e) {
-      System.err.println(e.getMessage());
+      System.err.println(
+          "Unable to write access log: " + e.getMessage());
     }
   }
 }
