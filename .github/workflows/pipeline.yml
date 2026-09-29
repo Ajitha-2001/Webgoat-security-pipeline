@@ -60,7 +60,6 @@ jobs:
       # ---------------------------------------------------------
       # 6. Gitleaks secrets scan
       # BLOCKING SECURITY GATE
-      # No continue-on-error here.
       # ---------------------------------------------------------
       - name: Gitleaks secrets scan - Security Gate
         uses: gitleaks/gitleaks-action@v3
@@ -82,9 +81,14 @@ jobs:
 
       # ---------------------------------------------------------
       # 8. Static Application Security Testing (SAST)
+      # DEMO BLOCKING SECURITY GATE
+      #
+      # IMPORTANT:
+      # No continue-on-error here.
+      # Therefore a Semgrep finding can fail the workflow.
+      # This change is for the temporary demonstration branch.
       # ---------------------------------------------------------
-      - name: Semgrep SAST scan
-        continue-on-error: true
+      - name: Semgrep SAST scan - Security Gate Demo
         uses: semgrep/semgrep-action@v1
         with:
           config: p/java
