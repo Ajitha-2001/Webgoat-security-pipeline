@@ -1,0 +1,117 @@
+# Local teaching lab only. See docs/security-pipeline.md.
+vulnerabilities:
+  - id: CVE-2013-7285
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
+  - id: CVE-2016-3674
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
+  - id: CVE-2017-7957
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
+  - id: CVE-2020-26217
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
+  - id: CVE-2021-21341
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
+  - id: CVE-2021-29505
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
+  - id: CVE-2021-39139
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
+  - id: CVE-2021-39141
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
+  - id: CVE-2021-39144
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
+  - id: CVE-2021-39145
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
+  - id: CVE-2021-39146
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
+  - id: CVE-2021-39147
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
+  - id: CVE-2021-39148
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
+  - id: CVE-2021-39149
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
+  - id: CVE-2021-39150
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
+  - id: CVE-2021-39151
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
+  - id: CVE-2021-39152
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
+  - id: CVE-2021-39153
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
+  - id: CVE-2021-39154
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
+  - id: CVE-2021-43859
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
+  - id: CVE-2022-40151
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
+  - id: CVE-2022-41966
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
+  - id: CVE-2024-47072
+    purls:
+      - "pkg:maven/com.thoughtworks.xstream/xstream@1.4.5"
+    expired_at: 2026-10-29
+    statement: "Intentional vulnerable-components lesson dependency; local loopback-only lab. Review owner: repository maintainers. See docs/security-pipeline.md."
