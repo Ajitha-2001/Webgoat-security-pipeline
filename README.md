@@ -26,9 +26,9 @@ A STRIDE-based threat model was carried out against the WebGoat deployment archi
 
 | ID | Threat | STRIDE Category | Likelihood | Impact | Primary Control |
 | --- | --- | --- | --- | --- | --- |
-| T1 | SQL Injection — unsanitised string-concatenated queries in the SQL Injection lesson | Tampering / Information Disclosure | High | High | Parameterised queries (`PreparedStatement`), verified with Semgrep (SAST gate) |
-| T2 | Stored Cross-Site Scripting (XSS) — unencoded user input rendered back to other users | Tampering / Information Disclosure | High | Medium–High | Output encoding, verified with Semgrep (SAST gate) |
-| T3 | JWT Bypass — insufficient signature verification, including `alg:none` | Spoofing / Elevation of Privilege | Medium | High | Enforced signature verification; reject `alg:none`; validate issuer/expiry; supporting library versions checked via dependency scanning |
+| T1 | SQL Injection — unsanitised string-concatenated queries in the SQL Injection lesson | Tampering / Information Disclosure | High | High | Parameterised queries (`PreparedStatement`) in `SqlInjectionLesson8.java`; validate with exploit retests and SAST evidence |
+| T2 | Stored Cross-Site Scripting (XSS) — unencoded user input rendered back to other users | Tampering / Information Disclosure | High | Medium–High | HTML escaping in `StoredXssComments.java`; validate in the browser and with separate SAST evidence |
+| T3 | JWT forgery using a weak or hardcoded signing secret | Spoofing / Elevation of Privilege | Medium | High | Environment-provided signing secret or secure random fallback in `JWTSecretKeyEndpoint.java`; this fix does not harden every JWT lesson |
 | T4 | Insecure Direct Object Reference (IDOR) — missing server-side object-ownership checks | Elevation of Privilege / Information Disclosure | Medium | Medium–High | Server-side ownership check on every object request |
 
 **Risk matrix (Likelihood × Impact):**
@@ -41,7 +41,7 @@ A STRIDE-based threat model was carried out against the WebGoat deployment archi
 
 T1 (SQL Injection) and T2 (Stored XSS) carry the highest combined risk due to their high likelihood of exploitation. T3 (JWT Bypass) has a lower likelihood but a high potential impact, since a successful forgery grants full impersonation. T4 (IDOR) sits at medium likelihood and medium-to-high impact.
 
-These four threats map to three OWASP Top 10 (2021) categories — Injection, Broken Authentication, and Broken Access Control — giving coverage across multiple vulnerability classes rather than a single one.
+These threats cover injection, authentication/cryptographic weaknesses, and broken access control. Map each demonstrated exploit to its precise CWE and OWASP category in the report; a scanner result alone is not proof of remediation.
 
 ## Repository Layout
 
@@ -126,24 +126,46 @@ ls webgoat/target/webgoat-*.jar
 
 > `-DskipTests` is used for this initial setup build. Tests must be run separately when validating changes; this build is not test or security evidence.
 
-### 4. Configure local access
+### 4. Configure local access and JWT secrets
 
-Use the following `docker-compose.yml` at the repository root:
+Use the committed `docker-compose.yml`; it builds `webgoat-app:ci`, binds ports
+8080 and 9090 to `127.0.0.1`, and forwards `JWT_SECRET` and `JWT_SECRET_KEY`
+from your environment. Do not replace it with an older example that omits these settings.
 
-```yaml
-services:
-  webgoat:
-    build: ./webgoat
-    container_name: webgoat
-    ports:
-      - "127.0.0.1:8080:8080"
-      - "127.0.0.1:9090:9090"
-    environment:
-      WEBGOAT_HOST: localhost
-      WEBGOAT_PORT: 8080
-      WEBWOLF_HOST: localhost
-      WEBWOLF_PORT: 9090
+Set fresh random values in the same terminal before running Compose. These
+commands keep the values out of source files and do not print them.
+
+**Windows PowerShell:**
+
+```powershell
+$jwtRng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$jwtBytes = New-Object byte[] 48
+$jwtRng.GetBytes($jwtBytes)
+$env:JWT_SECRET_KEY = [Convert]::ToBase64String($jwtBytes)
+$jwtRng.GetBytes($jwtBytes)
+$env:JWT_SECRET = [Convert]::ToBase64String($jwtBytes)
+$jwtRng.Dispose()
+Remove-Variable jwtBytes, jwtRng
 ```
+
+**macOS / Linux (requires OpenSSL):**
+
+```bash
+export JWT_SECRET_KEY="$(openssl rand -base64 48)"
+export JWT_SECRET="$(openssl rand -base64 48)"
+```
+
+`JWTSecretKeyEndpoint` specifically reads `JWT_SECRET_KEY` and requires at least
+32 characters when supplied. If it is missing or blank, that endpoint generates a
+random key on startup; tokens signed with the previous key will no longer verify
+after a restart. Compose also forwards `JWT_SECRET`, but setting either variable
+does not replace hardcoded values in other, intentionally vulnerable lessons.
+
+These terminal values last only for the current shell session. For a stable lab
+key across sessions, keep it in a password manager and provision it privately.
+Never commit keys or include them in screenshots, logs, or the report. Environment
+variables are configuration injection, not a vault; people with Docker access
+can inspect container configuration.
 
 ### 5. Build the image and start WebGoat
 
@@ -198,21 +220,44 @@ For Maven verification, use the same build-container command but replace `clean 
 
 ## CI/CD and Security Automation
 
-GitHub Actions is the intended automation platform. Workflow files live in `.github/workflows/`; their `on:` configuration determines when they run. These workflows execute in GitHub Actions, rather than locally through Docker Compose.
+[The workflow](.github/workflows/pipeline.yml) runs on pushes to all branches and
+pull requests targeting `main`. It runs `./mvnw clean test`, then
+`./mvnw package -DskipTests` (tests have already run), followed by the scans and
+Docker image build. It does not run the separate Failsafe/browser integration
+suite or deploy the application.
 
-The planned security checks are:
-
-| Check | Tool / implementation | Purpose |
+| Check | Current implementation | Effect on workflow |
 | --- | --- | --- |
-| Build and verification | Maven wrapper with Java 25 | Compile the application and execute configured tests. |
-| Static application security testing | Semgrep | Identify potentially insecure source-code patterns. |
-| Software composition analysis | Dependency scanner selected in the workflow | Identify known vulnerabilities in dependencies. |
-| Secrets scanning | Gitleaks | Detect potentially exposed credentials and tokens. |
-| Container image scanning | Trivy | Identify vulnerabilities in the built image. |
+| Build and unit tests | Maven wrapper, Temurin Java 25 | Blocking |
+| Secrets | Gitleaks with `.gitleaks.toml` | Blocking |
+| Dependencies | Trivy filesystem scan of `./webgoat`, HIGH/CRITICAL | Advisory: `continue-on-error: true` |
+| SAST | Semgrep `p/java` | Advisory: `continue-on-error: true` |
+| Docker build | `docker compose build` | Blocking |
+| Container image | Trivy scan of `webgoat-app:ci`, HIGH/CRITICAL | Advisory: `continue-on-error: true` |
 
-The committed workflows and their run results are the source of truth for implemented checks, triggers, failure thresholds, and report retention. A scan finding is not, by itself, proof of exploitability; findings must be reviewed and linked to evidence.
+A green workflow does not mean all scans are clean: advisory scan failures,
+including tool errors, can be tolerated. Gitleaks is the blocking security gate
+on `main`. The separate
+[SAST gate demonstration](https://github.com/Ajitha-2001/Webgoat-security-pipeline/actions/runs/36615706718)
+on `demo/security-gate-test` failed at Semgrep and skipped later Docker steps.
+Keep its screenshot and run link as evidence; do not describe that demo's
+blocking SAST configuration as the current configuration on `main`.
 
-View execution history in the repository's [Actions tab](https://github.com/Ajitha-2001/Webgoat-security-pipeline/actions).
+The assignment requires all four scan types and at least one genuinely blocking
+gate, with a failed-run demonstration. A failed workflow does not by itself
+prevent merging unless repository rules require the check; that protection is
+not established by this YAML file.
+
+The workflow uses only `p/java`; it does not select
+`.semgrep/jwt-hardcoded-secret.yml` or `xss-custom-rule.yml`.
+Retain the commands and before/after results for any separate custom-rule scans
+used in the report.
+
+Read [the security pipeline policy](docs/security-pipeline.md) for evidence,
+secrets handling, scan limitations, and report retention. Results are available
+in the [Actions tab](https://github.com/Ajitha-2001/Webgoat-security-pipeline/actions).
+The current workflow has no explicit Trivy/Semgrep/test-report artifact upload
+steps; retain the relevant logs and screenshots for submission.
 
 ## Vulnerability Documentation
 
