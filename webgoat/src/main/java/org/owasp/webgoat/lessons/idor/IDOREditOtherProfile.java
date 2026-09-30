@@ -40,73 +40,70 @@ public class IDOREditOtherProfile implements AssignmentEndpoint {
   @PutMapping(path = "/IDOR/profile/{userId}", consumes = "application/json")
   @ResponseBody
   public AttackResult completed(
-      @PathVariable("userId") String userId, @RequestBody UserProfile userSubmittedProfile) {
+      @PathVariable("userId") String userId,
+      @RequestBody UserProfile userSubmittedProfile) {
 
-    // Get the ID of the authenticated user from the server-side session.
-    String authUserId = (String) userSessionData.getValue("idor-authenticated-user-id");
+    // Retrieve the identity established by the lesson's login handler.
+    Object sessionUserId =
+        userSessionData.getValue("idor-authenticated-user-id");
 
-    // Authorization check:
-    // A user must not be allowed to modify another user's profile.
-    if (authUserId == null || !authUserId.equals(userId)) {
-      return failed(this).feedback("Unauthorized profile access").build();
-    }
-
-    // Original WebGoat lesson logic below.
-    UserProfile currentUserProfile = new UserProfile(userId);
-
-    if (userSubmittedProfile.getUserId() != null
-        && !userSubmittedProfile.getUserId().equals(authUserId)) {
-
-      currentUserProfile.setColor(userSubmittedProfile.getColor());
-      currentUserProfile.setRole(userSubmittedProfile.getRole());
-
-      userSessionData.setValue("idor-updated-other-profile", currentUserProfile);
-
-      if (currentUserProfile.getRole() <= 1
-          && currentUserProfile.getColor().equalsIgnoreCase("red")) {
-        return success(this)
-            .feedback("idor.edit.profile.success1")
-            .output(currentUserProfile.profileToMap().toString())
-            .build();
-      }
-
-      if (currentUserProfile.getRole() > 1
-          && currentUserProfile.getColor().equalsIgnoreCase("red")) {
-        return failed(this)
-            .feedback("idor.edit.profile.failure1")
-            .output(currentUserProfile.profileToMap().toString())
-            .build();
-      }
-
-      if (currentUserProfile.getRole() <= 1
-          && !currentUserProfile.getColor().equalsIgnoreCase("red")) {
-        return failed(this)
-            .feedback("idor.edit.profile.failure2")
-            .output(currentUserProfile.profileToMap().toString())
-            .build();
-      }
-
+    if (!(sessionUserId instanceof String)) {
       return failed(this)
-          .feedback("idor.edit.profile.failure3")
-          .output(currentUserProfile.profileToMap().toString())
+          .feedback("Authentication required")
           .build();
-
-    } else if (userSubmittedProfile.getUserId() != null
-        && userSubmittedProfile.getUserId().equals(authUserId)) {
-
-      return failed(this).feedback("idor.edit.profile.failure4").build();
     }
 
-    if (currentUserProfile.getColor().equals("black")
-        && currentUserProfile.getRole() <= 1) {
+    String authUserId = (String) sessionUserId;
 
-      return success(this)
-          .feedback("idor.edit.profile.success2")
-          .output(userSessionData.getValue("idor-updated-own-profile").toString())
+    // Verify ownership before accessing or modifying the profile.
+    if (authUserId.isBlank() || !authUserId.equals(userId)) {
+      return failed(this)
+          .feedback("Unauthorized profile access")
           .build();
-
-    } else {
-      return failed(this).feedback("idor.edit.profile.failure3").build();
     }
+
+    if (userSubmittedProfile == null) {
+      return failed(this)
+          .feedback("Profile data is required")
+          .build();
+    }
+
+    // Reject a body ID that differs from the authenticated user's ID.
+    String submittedUserId = userSubmittedProfile.getUserId();
+
+    if (submittedUserId != null && !authUserId.equals(submittedUserId)) {
+      return failed(this)
+          .feedback("Unauthorized profile access")
+          .build();
+    }
+
+    String submittedColor = userSubmittedProfile.getColor();
+
+    if (submittedColor == null || submittedColor.isBlank()) {
+      return failed(this)
+          .feedback("Profile color is required")
+          .build();
+    }
+
+    // Load profile data using the trusted session identity.
+    UserProfile currentUserProfile = new UserProfile(authUserId);
+
+    if (currentUserProfile.getUserId() == null) {
+      return failed(this)
+          .feedback("Profile not found")
+          .build();
+    }
+
+    // Update only the permitted field; retain server-defined permissions.
+    currentUserProfile.setColor(submittedColor.trim());
+
+    // Keep the updated profile in the current lesson session.
+    userSessionData.setValue(
+        "idor-updated-own-profile", currentUserProfile);
+
+    return success(this)
+        .feedback("Profile updated successfully")
+        .output(currentUserProfile.profileToMap().toString())
+        .build();
   }
 }
