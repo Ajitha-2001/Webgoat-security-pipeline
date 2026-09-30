@@ -11,3 +11,5 @@ services:
       WEBGOAT_PORT: 8080
       WEBWOLF_HOST: localhost
       WEBWOLF_PORT: 9090
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
