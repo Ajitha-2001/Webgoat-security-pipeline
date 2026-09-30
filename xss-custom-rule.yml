@@ -1,0 +1,14 @@
+rules:
+  - id: missing-html-escape-stored-xss
+    languages: [generic]
+    severity: ERROR
+    message: >
+      This class stores/returns user-supplied comment text without calling
+      HtmlUtils.htmlEscape(), which allows stored XSS if the text is later
+      rendered in a browser.
+    patterns:
+      - pattern-regex: 'class\s+StoredXssComments[\s\S]*'
+      - pattern-not-regex: 'HtmlUtils\.htmlEscape'
+    paths:
+      include:
+        - "*.java"
